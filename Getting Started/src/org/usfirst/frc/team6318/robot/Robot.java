@@ -20,9 +20,6 @@ import edu.wpi.first.wpilibj.Encoder;
 import edu.wpi.first.wpilibj.Compressor;
 import edu.wpi.first.wpilibj.DoubleSolenoid;
 import edu.wpi.first.wpilibj.ADXRS450_Gyro;
-import edu.wpi.first.wpilibj.AnalogInput;
-import edu.wpi.first.wpilibj.AnalogTrigger;
-import edu.wpi.first.wpilibj.Counter;
 
 /**
  * The VM is configured to automatically run this class, and to call the
@@ -140,8 +137,8 @@ public class Robot extends IterativeRobot {
 		System.out.print(" ");
 		System.out.print(step);
 		System.out.print(" ");
-		System.out.println(m_Gyro.getAngle());
-		//Dr ive for 2 seconds
+
+		
 		if(step == 0) {
 			autonomousInit();
 			
@@ -169,29 +166,44 @@ public class Robot extends IterativeRobot {
 		}
 		
 		
-		if (step == 1) {
-			m_robotDrive.arcadeDrive(0.75, -angle * kP); 
-		} else if(step == 2) {
-				m_robotDrive.arcadeDrive(0.01,0.5);
-		} else if(step == 3) {
-			m_robotDrive.arcadeDrive(0.6, -angle * kP);
-		} else {
-			m_robotDrive.stopMotor(); // stop robot
-		}
+		//if (step == 1) {
+		//	  m_robotDrive.arcadeDrive(0.75, -angle * kP); 
+		//} else if(step == 2) {
+		//		m_robotDrive.arcadeDrive(0.01,0.5);
+		//} else if(step == 3) { 
+		//	m_robotDrive.arcadeDrive(0.6, -angle * kP);
+		//} else {
+		//	m_robotDrive.stopMotor(); // stop robot
+		//}
 		
+		switch(step) {
+			case 1:
+				m_robotDrive.arcadeDrive(0.75, -angle * kP);
+				m_LiftMotor.set(1);
+				break;
+				
+			case 2: 
+				m_robotDrive.arcadeDrive(0.01,0.5);
+				break;
+				
+			case 3:
+				m_robotDrive.arcadeDrive(0.6, -angle * kP);
+				break;
+				
+			default:
+				m_LiftMotor.stopMotor();
+				m_TiltMotor.stopMotor();
+				m_robotDrive.stopMotor();
+				break;
+		}
 	}
-
+	
 	/**
 	 * This function is called once each time the robot enters teleoperated mode.
 	 */
 	@Override
 	public void teleopInit() {
-		
 		m_tiltEncoder.reset();
-		
-		
-		
-		
 	}
 
 	/**
@@ -213,41 +225,31 @@ public class Robot extends IterativeRobot {
 				if(!Stopped) {
 
 					//set the robot speed to the raw axis of the control stick
-					m_robotDrive.tankDrive(-m_XBoxController.getRawAxis(1),-m_XBoxController.getRawAxis(5));
+					m_robotDrive.tankDrive(-m_LogitechController.getRawAxis(1),-m_LogitechController.getRawAxis(5));
 					
-					//check if we need to move the lift
-					if(m_XBoxController.getRawAxis(3) > 0.25 ) {//&& m_LiftEncoder.getDistance() < 5) {
-						m_LiftMotor.set(1);
-					} else if(m_XBoxController.getRawAxis(2) > 0.25) { //&& m_LiftEncoder.getDistance() > -5) {
-						m_LiftMotor.set(-1);
-					} else {
-						m_LiftMotor.stopMotor();
-					}
-
 					//check if we need to move the lift
 					if(m_XBoxController.getRawAxis(3) > 0.25 ) {
 						m_LiftMotor.set(1);
-					} else if(m_XBoxController.getRawAxis(2) > 0.25 ) {
+					} else if(m_XBoxController.getRawAxis(2) > 0.25) {
 						m_LiftMotor.set(-1);
 					} else {
 						m_LiftMotor.stopMotor();
 					}
-
 					
 					//System.out.println(m_LiftEncoder.getRaw());
-
 					//System.out.println(m_tiltEncoder.get());
 					
 					//check if we need to tilt
-					//if(m_XBoxController.getRawButton(5)) { //down
-					//	m_TiltMotor.set(0.5);
+					if(m_XBoxController.getRawButton(5)) { //down
+						m_TiltMotor.set(0.75);
 						
-					//} else if(m_XBoxController.getRawButton(6)) { //up
-					//	m_TiltMotor.set(-0.5);
+					} else if(m_XBoxController.getRawButton(6)) { //up
+						m_TiltMotor.set(-0.75);
 						
-					//}  else {
-					//	m_TiltMotor.stopMotor();
-					//}
+					}  else {
+						m_TiltMotor.stopMotor();
+					}
+					
 					
 					//System.out.print("Button-1: ");
 					//System.out.print(m_XBoxController.getRawButton(1));
@@ -262,17 +264,6 @@ public class Robot extends IterativeRobot {
 					} else {
 						m_solenoid.set(DoubleSolenoid.Value.kOff);
 					}
-					
-					//check if we need to move the grabber
-					if(m_XBoxController.getRawButton(1)) {
-						m_solenoid.set(DoubleSolenoid.Value.kForward);
-					} else if(m_XBoxController.getRawButton(2)) {
-						m_solenoid.set(DoubleSolenoid.Value.kReverse);
-					} else {
-						m_solenoid.set(DoubleSolenoid.Value.kOff);
-					}
-
-					
 					
 				} else {
 					m_robotDrive.stopMotor();
