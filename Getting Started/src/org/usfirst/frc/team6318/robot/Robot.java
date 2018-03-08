@@ -20,6 +20,8 @@ import edu.wpi.first.wpilibj.Encoder;
 import edu.wpi.first.wpilibj.Compressor;
 import edu.wpi.first.wpilibj.DoubleSolenoid;
 import edu.wpi.first.wpilibj.ADXRS450_Gyro;
+import edu.wpi.first.wpilibj.DriverStation;
+
 
 /**
  * The VM is configured to automatically run this class, and to call the
@@ -64,7 +66,7 @@ public class Robot extends IterativeRobot {
 	private DoubleSolenoid m_solenoid = new DoubleSolenoid(0,1);
 	
 	//gyro
-	private ADXRS450_Gyro m_Gyro = new ADXRS450_Gyro();
+	public ADXRS450_Gyro m_Gyro = new ADXRS450_Gyro();
 	static float kP = (float) 0.23;
 	
 	int step = 0;
@@ -132,69 +134,91 @@ public class Robot extends IterativeRobot {
 		
 		
 		double angle = m_Gyro.getAngle();
+		String gameData;
+		gameData = DriverStation.getInstance().getGameSpecificMessage();
+		
 		
 		System.out.print(m_timer.get());
 		System.out.print(" ");
 		System.out.print(step);
 		System.out.print(" ");
 
-		
-		if(step == 0) {
-			autonomousInit();
-			
-		}
-		
-		if(m_timer.get() >= 2.3 && step == 1) {
-			step = 2;
-			m_timer.stop();
-			m_timer.reset();
-		}
-		
-		if(m_Gyro.getAngle() > 79 && step == 2) {
-			//m_robotDrive.arcadeDrive(0.01, -(angle - 90) * 0.001);
-			m_robotDrive.stopMotor();
-			Timer.delay(0.5);
-			
-			m_Gyro.reset();
-			step = 3;
-			m_timer.start();
-		}
-		
-		if(m_timer.get() > 1.7 && step == 3) {
-			m_robotDrive.stopMotor();
-			step = 4;
-		}
-		
-		
-		//if (step == 1) {
-		//	  m_robotDrive.arcadeDrive(0.75, -angle * kP); 
-		//} else if(step == 2) {
-		//		m_robotDrive.arcadeDrive(0.01,0.5);
-		//} else if(step == 3) { 
-		//	m_robotDrive.arcadeDrive(0.6, -angle * kP);
-		//} else {
-		//	m_robotDrive.stopMotor(); // stop robot
-		//}
-		
-		switch(step) {
-			case 1:
-				m_robotDrive.arcadeDrive(0.75, -angle * kP);
-				m_LiftMotor.set(1);
-				break;
+		if(gameData.length() > 0) {
+			if(gameData.charAt(0) == 'L') {
+				if(step == 0) {
+					autonomousInit();
+					
+				}
 				
-			case 2: 
-				m_robotDrive.arcadeDrive(0.01,0.5);
-				break;
+				if(m_timer.get() >= 2.3 && step == 1) {
+					step = 2;
+					m_timer.stop();
+					m_timer.reset();
+				}
 				
-			case 3:
-				m_robotDrive.arcadeDrive(0.6, -angle * kP);
-				break;
+				if(m_Gyro.getAngle() > 79 && step == 2) {
+					//m_robotDrive.arcadeDrive(0.01, -(angle - 90) * 0.001);
+					m_robotDrive.stopMotor();
+					Timer.delay(0.5);
+					
+					m_Gyro.reset();
+					step = 3;
+					m_timer.start();
+				}
 				
-			default:
-				m_LiftMotor.stopMotor();
-				m_TiltMotor.stopMotor();
-				m_robotDrive.stopMotor();
-				break;
+				if(m_timer.get() > 1.7 && step == 3) {
+					m_timer.stop();
+					m_timer.reset();
+					m_robotDrive.stopMotor();
+					step = 4;
+				}
+				
+				if(m_timer.get() > 0.3 && step == 4) {
+					m_TiltMotor.stopMotor();
+					m_robotDrive.stopMotor();
+					
+					step = 5;
+				}
+				
+				//if (step == 1) {
+				//	  m_robotDrive.arcadeDrive(0.75, -angle * kP); 
+				//} else if(step == 2) {
+				//		m_robotDrive.arcadeDrive(0.01,0.5);
+				//} else if(step == 3) { 
+				//	m_robotDrive.arcadeDrive(0.6, -angle * kP);
+				//} else {
+				//	m_robotDrive.stopMotor(); // stop robot
+				//}
+				
+				switch(step) {
+					case 1:
+						m_robotDrive.arcadeDrive(0.75, -angle * kP);
+						m_LiftMotor.set(1);
+						break;
+						
+					case 2: 
+						m_robotDrive.arcadeDrive(0.01,0.5);
+						break;
+						
+					case 3:
+						m_robotDrive.arcadeDrive(0.6, -angle * kP);
+						m_TiltMotor.set(-0.75);
+						break;
+					case 4:
+						m_solenoid.set(DoubleSolenoid.Value.kForward);
+					default:
+						m_LiftMotor.stopMotor();
+						m_TiltMotor.stopMotor();
+						m_robotDrive.stopMotor();
+						break;
+				}
+			} else {
+				if(m_timer.get() < 2.3) {
+					m_robotDrive.arcadeDrive(0.75, -angle * kP);
+				} else {
+					m_robotDrive.stopMotor();
+				}
+			}
 		}
 	}
 	
