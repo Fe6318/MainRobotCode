@@ -17,12 +17,13 @@ import edu.wpi.first.wpilibj.SpeedControllerGroup;
 import edu.wpi.first.wpilibj.SpeedController;
 import edu.wpi.first.wpilibj.Talon;
 import edu.wpi.first.wpilibj.VictorSP;
+import edu.wpi.first.wpilibj.command.Scheduler;
 import edu.wpi.first.wpilibj.Encoder;
 import edu.wpi.first.wpilibj.Compressor;
 import edu.wpi.first.wpilibj.DoubleSolenoid;
 import edu.wpi.first.wpilibj.ADXRS450_Gyro;
 import edu.wpi.first.wpilibj.DriverStation;
-
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 
 /**
  * The VM is configured to automatically run this class, and to call the
@@ -70,12 +71,15 @@ public class Robot extends IterativeRobot {
 	public ADXRS450_Gyro m_Gyro = new ADXRS450_Gyro();
 	static float kP = (float) 0.23;
 	
+	//smart dashboard
+	SmartDashboard m_SmartDashboard;
+	
 	//select program
-	SendableChooser autoChooser = new SendableChooser();
+	//SendableChooser<String> autoChooser;
 	
 	int step = 0;
 	/**
-	 * This function is run when the robot is first started up and should be
+	 * This function is ran when the robot is first started up and should be
 	 * used for any initialization code.
 	 */
 	@Override
@@ -116,19 +120,28 @@ public class Robot extends IterativeRobot {
 		m_robotDrive.setSafetyEnabled(true);
 		m_robotDrive.stopMotor();
 		
+		//smart dashboard
+		m_SmartDashboard = new SmartDashboard();
+		
+		m_SmartDashboard.putString("Chosen Program", "L");
+		
 		//set up program selector
-		autoChooser.addDefault("Left", "Left");
-		autoChooser.addObject("Center", "Center");
-		autoChooser.addObject("Right","Right");
-		autoChooser.addObject("Auto line only","Auto line only");
+		//autoChooser = new SendableChooser<String>();
+		//autoChooser.setName("Auto Chooser");
+		//autoChooser.addDefault("L", "L");
+		//autoChooser.addObject("C", "C");
+		//autoChooser.addObject("R","R");
+		//autoChooser.addObject("Auto line only","Auto line only");
+		
 		
 	}
 
 	/**
-	 * This function is run once each time the robot enters autonomous mode.
+	 * This function runs once each time the robot enters autonomous mode.
 	 */
 	@Override
 	public void autonomousInit() {
+		m_solenoid.set(DoubleSolenoid.Value.kReverse);
 		m_timer.reset();
 		m_timer.start();
 		step = 1;
@@ -142,17 +155,20 @@ public class Robot extends IterativeRobot {
 	@Override
 	public void autonomousPeriodic() {
 		
+		Scheduler.getInstance().run();
 		
 		double angle = m_Gyro.getAngle();
 		String gameData;
 		gameData = DriverStation.getInstance().getGameSpecificMessage();
-		String chosenProgram = (String) autoChooser.getSelected();
+		String chosenProgram = m_SmartDashboard.getString("Chosen Program", "L").toUpperCase();
+		System.out.println("Program Chosen: " + chosenProgram);
+		System.out.println("Game Data: " + gameData);
+		//System.out.print(m_timer.get());
+		//System.out.print(" ");
+		//System.out.print(step);
+		//System.out.print(" ");
 		
-		System.out.print(m_timer.get());
-		System.out.print(" ");
-		System.out.print(step);
-		System.out.print(" ");
-		
+		//System.out.println("Encoder: " + m_tiltEncoder.get());
 		
 		if(step == 0) {
 			autonomousInit();
@@ -160,11 +176,12 @@ public class Robot extends IterativeRobot {
 		
 		
 		if(gameData.length() > 0) {
-			if(chosenProgram.equals("Left")) {
+			if(chosenProgram.equals("L")) {
 				if(gameData.charAt(0) == 'L') {
 					
 					if(m_timer.get() >= 2.3 && step == 1) {
 						step = 2;
+						//m_LiftMotor.stopMotor();
 						m_timer.stop();
 						m_timer.reset();
 					}
@@ -174,14 +191,17 @@ public class Robot extends IterativeRobot {
 						m_robotDrive.stopMotor();
 						Timer.delay(0.5);
 						
+						m_LiftMotor.stopMotor();
+						
 						m_Gyro.reset();
 						step = 3;
 						m_timer.start();
 					}
 					
-					if(m_timer.get() > 1.7 && step == 3) {
+					if(m_timer.get() > 1 && step == 3) {
 						m_timer.stop();
 						m_timer.reset();
+						m_TiltMotor.stopMotor();
 						m_robotDrive.stopMotor();
 						step = 4;
 					}
@@ -191,6 +211,105 @@ public class Robot extends IterativeRobot {
 						m_robotDrive.stopMotor();
 						
 						step = 5;
+					}
+					
+					if(m_tiltEncoder.get() > -120) {
+						m_TiltMotor.set(0.75);
+					} else {
+						m_TiltMotor.stopMotor();
+					}
+					//if (step == 1) {
+					//	  m_robotDrive.arcadeDrive(0.75, -angle * kP); 
+					//} else if(step == 2) {
+					//		m_robotDrive.arcadeDrive(0.01,0.5);
+					//} else if(step == 3) { 
+					//	m_robotDrive.arcadeDrive(0.6, -angle * kP);
+					//} else {
+					//	m_robotDrive.stopMotor(); // stop robot
+					//}
+					
+					switch(step) {
+						case 1:
+							m_robotDrive.arcadeDrive(0.75, -angle * kP);
+							m_LiftMotor.set(-1);
+							break;
+							
+						case 2: 
+							m_robotDrive.arcadeDrive(0.01,0.5);
+							m_LiftMotor.set(-1);
+							
+							break;
+							
+						case 3:
+							m_robotDrive.arcadeDrive(0.6, -angle * kP);
+							
+							break;
+						case 4:
+							m_solenoid.set(DoubleSolenoid.Value.kForward);
+						default:
+							m_LiftMotor.stopMotor();
+							m_TiltMotor.stopMotor();
+							m_robotDrive.stopMotor();
+							break;
+					}
+				} else {
+					if(m_timer.get() < 2.3) {
+						m_robotDrive.arcadeDrive(0.75, -angle * kP);
+						m_LiftMotor.set(-1);
+					} else {
+						m_robotDrive.stopMotor();
+						m_LiftMotor.stopMotor();
+					}
+				}
+			} else if(chosenProgram.equals("C")) {
+				if(m_timer.get() < 2.3) {
+					m_robotDrive.arcadeDrive(0.75, -angle * kP);
+					m_LiftMotor.set(-1);
+				} else {
+					m_robotDrive.stopMotor();
+					m_LiftMotor.stopMotor();
+				}
+				
+			} else if(chosenProgram.equals("R")) {
+				if(gameData.charAt(0) == 'R') {
+					
+					if(m_timer.get() >= 2.3 && step == 1) {
+						step = 2;
+						//m_LiftMotor.stopMotor();
+						m_timer.stop();
+						m_timer.reset();
+					}
+					
+					if(m_Gyro.getAngle() < -79 && step == 2) {
+						//m_robotDrive.arcadeDrive(0.01, -(angle - 90) * 0.001);
+						m_robotDrive.stopMotor();
+						Timer.delay(0.5);
+						//m_LiftMotor.stopMotor();
+						m_Gyro.reset();
+						step = 3;
+						m_timer.start();
+					}
+					
+					if(m_timer.get() > 1 && step == 3) {
+						m_timer.stop();
+						m_timer.reset();
+						m_TiltMotor.stopMotor();
+						m_LiftMotor.stopMotor();
+						m_robotDrive.stopMotor();
+						step = 4;
+					}
+					
+					if(m_timer.get() > 0.3 && step == 4) {
+						m_TiltMotor.stopMotor();
+						m_robotDrive.stopMotor();
+						
+						step = 5;
+					}
+					
+					if(m_tiltEncoder.get() > -120) {
+						m_TiltMotor.set(0.75);
+					} else {
+						m_TiltMotor.stopMotor();
 					}
 					
 					//if (step == 1) {
@@ -206,16 +325,18 @@ public class Robot extends IterativeRobot {
 					switch(step) {
 						case 1:
 							m_robotDrive.arcadeDrive(0.75, -angle * kP);
-							m_LiftMotor.set(1);
+							m_LiftMotor.set(-1);
+							
 							break;
 							
 						case 2: 
-							m_robotDrive.arcadeDrive(0.01,0.5);
+							m_robotDrive.arcadeDrive(0.01,-0.5);
+							m_LiftMotor.set(-1);
 							break;
 							
 						case 3:
 							m_robotDrive.arcadeDrive(0.6, -angle * kP);
-							m_TiltMotor.set(-0.75);
+							m_LiftMotor.set(-1);
 							break;
 						case 4:
 							m_solenoid.set(DoubleSolenoid.Value.kForward);
@@ -228,28 +349,15 @@ public class Robot extends IterativeRobot {
 				} else {
 					if(m_timer.get() < 2.3) {
 						m_robotDrive.arcadeDrive(0.75, -angle * kP);
+						m_LiftMotor.set(-1);
 					} else {
 						m_robotDrive.stopMotor();
+						m_LiftMotor.stopMotor();
 					}
 				}
-			} else if(chosenProgram.equals("center")) {
-				if(m_timer.get() < 1.8) {
-					m_robotDrive.arcadeDrive(0.75, -angle * kP);
-				} else {
-					m_robotDrive.stopMotor();
-				}
-			} else if(chosenProgram.equals("right")) {
-				if(m_timer.get() < 1.8) {
-					m_robotDrive.arcadeDrive(0.75, -angle * kP);
-				} else {
-					m_robotDrive.stopMotor();
-				}
 			} else {
-				if(m_timer.get() < 1.8) {
-					m_robotDrive.arcadeDrive(0.75, -angle * kP);
-				} else {
-					m_robotDrive.stopMotor();
-				}
+				m_robotDrive.stopMotor();
+				
 			}
 		}
 	}
@@ -259,9 +367,9 @@ public class Robot extends IterativeRobot {
 	 */
 	@Override
 	public void teleopInit() {
-		m_tiltEncoder.reset();
+		//m_tiltEncoder.reset();
 	}
-
+	
 	/**
 	 * This function is called periodically during teleoperated mode.
 	 */
@@ -281,27 +389,25 @@ public class Robot extends IterativeRobot {
 				if(!Stopped) {
 
 					//set the robot speed to the raw axis of the control stick
-					m_robotDrive.tankDrive(-m_LogitechController.getRawAxis(1),-m_LogitechController.getRawAxis(5));
+					m_robotDrive.tankDrive(-m_LogitechController.getRawAxis(1) * 0.85,-m_LogitechController.getRawAxis(5) * 0.85);
 					
 					//check if we need to move the lift
-					if(m_XBoxController.getRawAxis(3) > 0.25 ) {
+					if(m_XBoxController.getRawAxis(2) > 0.25 ) {
 						m_LiftMotor.set(1);
-					} else if(m_XBoxController.getRawAxis(2) > 0.25) {
+					} else if(m_XBoxController.getRawAxis(3) > 0.25) {
 						m_LiftMotor.set(-1);
 					} else {
 						m_LiftMotor.stopMotor();
 					}
 					
 					//System.out.println(m_LiftEncoder.getRaw());
-					System.out.println("Tilt Encoder Raw" + m_tiltEncoder.get());
+					//System.out.println("Tilt Encoder: " + m_tiltEncoder.get());
 					
 					//check if we need to tilt
 					if(m_XBoxController.getRawButton(5)) { //down
 						m_TiltMotor.set(0.75);
-						
 					} else if(m_XBoxController.getRawButton(6)) { //up
 						m_TiltMotor.set(-0.75);
-						
 					}  else {
 						m_TiltMotor.stopMotor();
 					}
